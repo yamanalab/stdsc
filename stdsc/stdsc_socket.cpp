@@ -34,8 +34,12 @@
 #include <stdsc/stdsc_packet.hpp>
 #include <stdsc/stdsc_buffer.hpp>
 
-#define INVALID_SOCKET (-1)
-#define SOCKET_ERROR (-1)
+static constexpr int INVALID_SOCKET = -1;
+static constexpr int SOCKET_ERROR = -1;
+static constexpr int SOCKET_CLOSED = 0;
+static constexpr int KEEPALIVEDELAY_SEC = 60;
+static constexpr int KEEPINTERVALTIME_SEC = 30;
+static constexpr int KEEPALIVECOUNT = 10;
 
 #define SOCKET_IF_CHECK(cond, msg)                               \
     do                                                           \
@@ -43,7 +47,7 @@
         if (!(cond))                                             \
         {                                                        \
             STDSC_LOG_ERR(msg " : Sock Error Code (%d)", errno); \
-            STDSC_THROW_SOCKET_(msg);                            \
+            STDSC_THROW_SOCKET(msg);                             \
         }                                                        \
     } while (0)
 
@@ -55,7 +59,7 @@
             STDSC_LOG_ERR(msg " : Sock Error Code (%d)", errno); \
             shutdown_socket(socket);                             \
             close_socket(socket);                                \
-            STDSC_THROW_SOCKET_(msg);                            \
+            STDSC_THROW_SOCKET(msg);                             \
         }                                                        \
     } while (0)
 
@@ -67,6 +71,10 @@ static void shutdown_socket(int socket)
     int ret = ::shutdown(socket, SHUT_RDWR);
     if (ret < 0)
     {
+        // 9   : EBADF
+        // 22  : EINVAL
+        // 107 : ENOTCONN
+        // 88  : ENOTSOCK
         STDSC_LOG_DEBUG("Failed to shutdown socket : %d", errno);
     }
     return;
@@ -74,9 +82,9 @@ static void shutdown_socket(int socket)
 
 static void close_socket(int& socket)
 {
-    if (socket < 0)
+    if (socket != INVALID_SOCKET)
     {
-        STDSC_LOG_INFO("close : 0x%x", socket);
+        STDSC_LOG_DEBUG("close : 0x%x", socket);
 
         int ret = ::close(socket);
         if (ret < 0)
@@ -112,7 +120,7 @@ static bool wait_write(int socket, uint32_t timeout_sec)
 
     int ret;
 
-    if (STDSC_INFINITE != timeout_sec)
+    if (STDSC_TIME_INFINITE != timeout_sec)
     {
         struct timeval tv;
         tv.tv_sec = static_cast<long>(timeout_sec);
@@ -138,15 +146,13 @@ static bool wait_write(int socket, uint32_t timeout_sec)
 
 static bool wait_read(int socket, uint32_t timeout_sec)
 {
-    // STDSC_LOG_TRACE("wait read : %u : 0x%x", timeout_sec, socket);
-
     fd_set rfds;
     FD_ZERO(&rfds);
     FD_SET(socket, &rfds);
 
     int ret;
 
-    if (STDSC_INFINITE != timeout_sec)
+    if (STDSC_TIME_INFINITE != timeout_sec)
     {
         struct timeval tv;
         tv.tv_sec = static_cast<long>(timeout_sec);
@@ -181,7 +187,7 @@ struct Socket::Impl
 
     void read(void* buffer, std::size_t bytes) const
     {
-        // STDSC_LOG_TRACE("read : 0x%x", socket_);
+        STDSC_LOG_DEBUG("read: 0x%x", socket_);
         char* ptr = reinterpret_cast<char*>(buffer);
         std::size_t remain = bytes;
 
@@ -189,6 +195,7 @@ struct Socket::Impl
         {
             int ret = ::recv(socket_, ptr, remain, 0);
             SOCKET_IF_CHECK(SOCKET_ERROR != ret, "Failed to receive");
+            SOCKET_IF_CHECK(SOCKET_CLOSED != ret, "Socket closed");
             ptr += ret;
             remain -= ret;
         }
@@ -196,13 +203,12 @@ struct Socket::Impl
 
     void write(const void* buffer, std::size_t bytes) const
     {
-        // STDSC_LOG_TRACE("write : 0x%x", socket_);
+        STDSC_LOG_DEBUG("write : 0x%x", socket_);
         const char* ptr = reinterpret_cast<const char*>(buffer);
         std::size_t remain = bytes;
 
         while (0 < remain)
         {
-            // STDSC_LOG_TRACE("remain : %d", remain);
             int ret = ::send(socket_, static_cast<const char*>(ptr), remain, 0);
             SOCKET_IF_CHECK(SOCKET_ERROR != ret, "Failed to send");
 
@@ -275,6 +281,9 @@ Socket Socket::accept_connection(Socket& listen_sock, uint32_t timeout_sec)
 {
     int ret;
     int onoff = 1;
+    int keepalivedelay_sec = KEEPALIVEDELAY_SEC;
+    int keepaliveinterval_sec = KEEPINTERVALTIME_SEC;
+    int keepalivecount = KEEPALIVECOUNT;
 
     int listen_socket = listen_sock.pimpl_->socket_;
     STDSC_LOG_TRACE("accept connection : 0x%x", listen_socket);
@@ -283,12 +292,16 @@ Socket Socket::accept_connection(Socket& listen_sock, uint32_t timeout_sec)
     bool wait_result = wait_read(listen_socket, timeout_sec);
     SOCKET_IF_CHECK(true == wait_result, "Accept connection timed out");
 
+    STDSC_LOG_DEBUG("wait_read.");
+
     /* accept */
     sockaddr_in client;
     socklen_t addr_len = sizeof(client);
     int socket =
       ::accept(listen_socket, reinterpret_cast<sockaddr*>(&client), &addr_len);
     SOCKET_IF_CHECK(INVALID_SOCKET != socket, "Failed to accept");
+
+    STDSC_LOG_DEBUG("accepted.");
 
     /* set nodelay option */
     ret = setsockopt(socket, IPPROTO_TCP, TCP_NODELAY,
@@ -308,18 +321,42 @@ Socket Socket::accept_connection(Socket& listen_sock, uint32_t timeout_sec)
                  reinterpret_cast<const char*>(&buf_size), sizeof(buf_size));
     SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
 
+    /* set keepalive values */
+    ret = setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE,
+                     reinterpret_cast<const char*>(&onoff), sizeof(onoff));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE,
+                     reinterpret_cast<const char*>(&keepalivedelay_sec),
+                     sizeof(keepalivedelay_sec));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL,
+                     reinterpret_cast<const char*>(&keepaliveinterval_sec),
+                     sizeof(keepaliveinterval_sec));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT,
+                     reinterpret_cast<const char*>(&keepalivecount),
+                     sizeof(keepalivecount));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
+    STDSC_LOG_DEBUG("setsocketopt.");
+
     Socket accept_socket;
     accept_socket.pimpl_->socket_ = socket;
     return accept_socket;
 }
 
-Socket Socket::establish_connection(const char* host_or_addr, const char* port,
+Socket Socket::establish_connection(const char* host, const char* port,
                                     uint32_t timeout_sec)
 {
     STDSC_LOG_TRACE("establish connection");
 
     int ret;
     int onoff = 1;
+    int keepalivedelay_sec = KEEPALIVEDELAY_SEC;
+    int keepaliveinterval_sec = KEEPINTERVALTIME_SEC;
+    int keepalivecount = KEEPALIVECOUNT;
 
     uint32_t uint32_port = atoi(port);
     STDSC_IF_CHECK(uint32_port <= USHRT_MAX, "invalid port number");
@@ -346,6 +383,25 @@ Socket Socket::establish_connection(const char* host_or_addr, const char* port,
                  reinterpret_cast<const char*>(&buf_size), sizeof(buf_size));
     SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
 
+    /* set keepalive values */
+    ret = setsockopt(socket, SOL_SOCKET, SO_KEEPALIVE,
+                     reinterpret_cast<const char*>(&onoff), sizeof(onoff));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPIDLE,
+                     reinterpret_cast<const char*>(&keepalivedelay_sec),
+                     sizeof(keepalivedelay_sec));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPINTVL,
+                     reinterpret_cast<const char*>(&keepaliveinterval_sec),
+                     sizeof(keepaliveinterval_sec));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+    ret = setsockopt(socket, IPPROTO_TCP, TCP_KEEPCNT,
+                     reinterpret_cast<const char*>(&keepalivecount),
+                     sizeof(keepalivecount));
+    SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret, "Failed to setsockopt", socket);
+
     /* convert hostname to addr */
     addrinfo* info;
     addrinfo hint;
@@ -353,7 +409,7 @@ Socket Socket::establish_connection(const char* host_or_addr, const char* port,
     hint.ai_family = AF_INET;
     hint.ai_socktype = SOCK_STREAM;
     hint.ai_protocol = IPPROTO_TCP;
-    ret = ::getaddrinfo(host_or_addr, port, &hint, &info);
+    ret = ::getaddrinfo(host, port, &hint, &info);
     SOCKET_IF_CHECK_CLOSE(0 == ret, "Failed to get addr info", socket);
 
     /* make sockaddr */
@@ -364,9 +420,11 @@ Socket Socket::establish_connection(const char* host_or_addr, const char* port,
     ret =
       ::connect(socket, reinterpret_cast<sockaddr*>(&server), sizeof(server));
     int err = errno;
-    STDSC_LOG_TRACE("connect return: ret:%d, errno:%d", ret, err);
+    STDSC_LOG_DEBUG("connect return: ret:%d, errno:%d", ret, err);
     SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret || EINPROGRESS == err,
                           "Failed to connect", socket);
+    // SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret || EINPROGRESS == err,
+    //                      "Failed to connect", socket);
 
     /* select */
     if (EINPROGRESS == err)
@@ -382,7 +440,7 @@ Socket Socket::establish_connection(const char* host_or_addr, const char* port,
               "Connection timed out"
               " : Sock Error Code (%d)",
               EWOULDBLOCK);
-            STDSC_THROW_SOCKET_("Connection timed out");
+            STDSC_THROW_SOCKET("Connection timed out");
         }
     }
 

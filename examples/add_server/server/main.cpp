@@ -15,14 +15,28 @@
  * limitations under the License.
  */
 
-#ifndef STDSC_DEFINE_HPP
-#define STDSC_DEFINE_HPP
+#include <iostream>
+#include <stdsc/stdsc_exception.hpp>
+#include <server/server.hpp>
+#include <server/state.hpp>
 
-#define STDSC_TIME_INFINITE 0xFFFFFFFF
-#define STDSC_RETRY_INTERVAL_USEC (1000000)
-#define STDSC_MAX_RETRY_COUNT (10)
+int main()
+{
+    try
+    {
+        stdsc::StateContext state(std::make_shared<server::StateInit>());
 
-#define STDSC_TCP_BUFFER_SIZE (1 * 1024 * 1024)
-#define STDSC_CONN_TIMEOUT_SEC (30)
-
-#endif /* STDSC_DEFINE_HPP */
+        server::AddServer server(state, SERVER_PORT);
+        server.start();
+        server.join();
+    }
+    catch (stdsc::AbstractException &e)
+    {
+        std::cerr << "catch exception: " << e.what() << std::endl;
+    }
+    catch (...)
+    {
+        std::cerr << "catch unknown exception" << std::endl;
+    }
+    return 0;
+}

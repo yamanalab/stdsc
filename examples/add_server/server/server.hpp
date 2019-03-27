@@ -15,14 +15,35 @@
  * limitations under the License.
  */
 
-#ifndef STDSC_DEFINE_HPP
-#define STDSC_DEFINE_HPP
+#ifndef SERVER_HPP
+#define SERVER_HPP
 
-#define STDSC_TIME_INFINITE 0xFFFFFFFF
-#define STDSC_RETRY_INTERVAL_USEC (1000000)
-#define STDSC_MAX_RETRY_COUNT (10)
+#include <memory>
+#include <stdsc/stdsc_server.hpp>
+#include <server/callback_function.hpp>
+#include <share/define.hpp>
 
-#define STDSC_TCP_BUFFER_SIZE (1 * 1024 * 1024)
-#define STDSC_CONN_TIMEOUT_SEC (30)
+namespace stdsc
+{
+    class StateContext;
+}
 
-#endif /* STDSC_DEFINE_HPP */
+namespace server
+{
+
+struct AddServer
+{
+    AddServer(stdsc::StateContext& state, const char* port);
+    ~AddServer(void) = default;
+
+    void start(void);
+    void join(void);
+
+private:
+    CallbackParam param_;
+    std::shared_ptr<stdsc::Server<>> server_;
+};
+
+} /* namespace server */
+
+#endif /* SERVER_HPP */

@@ -47,7 +47,7 @@ static LogLevel_t read_env(void)
     return level;
 }
 
-static std::string compose_footer(const char* source_file_name,
+static std::string make_debuginfo(const char* source_file_name,
                                   const char* func_name, int source_line_number)
 {
     std::string striped_source_file_name(source_file_name);
@@ -111,7 +111,9 @@ void Logger::emit(const LogLevel_t level, const char* source_file_name,
 
     std::stringstream ss;
     ss << std::setw(48) << std::left << message;
-    ss << compose_footer(source_file_name, func_name, source_line_number);
+    if (pimpl_->current_level_ >= kLogLevelDebug) {
+        ss << make_debuginfo(source_file_name, func_name, source_line_number);
+    }
     std::cout << ss.str() << std::endl;
 }
 

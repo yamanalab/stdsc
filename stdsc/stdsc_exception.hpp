@@ -22,7 +22,7 @@
 #include <stdexcept>
 #include <sstream>
 
-#define STDSC_THROW_SOCKET_(message)                  \
+#define STDSC_THROW_SOCKET(message)                   \
     {                                                 \
         throw stdsc::SocketException(message, errno); \
     }
@@ -57,6 +57,15 @@
         if (!(cond))                        \
             STDSC_THROW_INVARIANT(message); \
     }
+
+#define STDSC_THROW_SOCKET_IF_CHECK(cond, msg) \
+    do                                         \
+    {                                          \
+        if (!(cond))                           \
+        {                                      \
+            STDSC_THROW_SOCKET(msg);           \
+        }                                      \
+    } while (0)
 
 #define STDSC_THROW_CALLBACK_IF_CHECK(cond, msg) \
     do                                           \

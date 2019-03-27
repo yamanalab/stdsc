@@ -16,7 +16,7 @@
  */
 
 #include <unistd.h>
-
+#include <sstream>
 #include <stdsc/stdsc_client.hpp>
 #include <stdsc/stdsc_socket.hpp>
 #include <stdsc/stdsc_log.hpp>
@@ -27,6 +27,30 @@
 
 namespace stdsc
 {
+
+static inline uint32_t calc_retry_count(const uint32_t timeout_sec,
+                                        const uint32_t retry_interval_usec)
+{
+    uint32_t retry_interval_sec = retry_interval_usec / 1000000;
+    uint32_t retry_count =
+      (retry_interval_sec) ? (timeout_sec / retry_interval_sec) : 1;
+    return retry_count;
+}
+
+static inline std::string count2str(uint32_t count)
+{
+    std::ostringstream oss;
+    if (STDSC_TIME_INFINITE == count)
+    {
+        oss << "inf";
+    }
+    else
+    {
+        oss << count;
+    }
+    return oss.str();
+}
+
 struct Client::Impl
 {
     Impl(void)
@@ -35,33 +59,44 @@ struct Client::Impl
 
     ~Impl(void)
     {
+        sock_.close();
     }
 
     void connect(const char* host, const char* port,
-                 uint32_t retry_interval_usec = STDSC_RETRY_INTERVAL_USEC,
-                 uint32_t timeout_sec = STDSC_INFINITE)
+                 const uint32_t retry_interval_usec, const uint32_t timeout_sec)
     {
         bool is_success = false;
-        while (!is_success)
+        uint32_t retry_count = 0;
+
+        uint32_t max_retry_count =
+          calc_retry_count(timeout_sec, retry_interval_usec);
+
+        while (!is_success && max_retry_count > retry_count)
         {
             try
             {
-                sock_ =
-                  Socket::establish_connection(host, port, STDSC_INFINITE);
+                sock_ = Socket::establish_connection(host, port);
                 is_success = true;
             }
             catch (const SocketException& e)
             {
-                STDSC_LOG_TRACE(e.what());
+                retry_count++;
+                STDSC_LOG_INFO("Retry to connect to %s @ %s. (%d / %s)", host,
+                               port, retry_count,
+                               count2str(max_retry_count).c_str());
                 usleep(retry_interval_usec);
             }
         }
-        STDSC_LOG_INFO("Connected to server (%s)", host);
+
+        STDSC_THROW_SOCKET_IF_CHECK(max_retry_count > retry_count,
+                                    "Connection time out");
+
+        STDSC_LOG_TRACE("Connected to server (%s)", host);
     }
 
     void close(void)
     {
-        sock_.send_packet(make_packet(kControlCodeExit));
+        sock_.close();
     }
 
     void send_request(const uint64_t code)
@@ -132,8 +167,19 @@ struct Client::Impl
         auto size = static_cast<std::size_t>(recv_packet.u_body.data.size);
         STDSC_LOG_TRACE("Received packet. (code:0x%08x, sz:%lu)",
                         recv_packet.control_code, size);
-        buffer.resize(size);
-        sock_.recv_buffer(buffer);
+        if (recv_packet.control_code == kControlCodeReject)
+        {
+            std::ostringstream ss;
+            ss << "Rejected to recv data. (0x" << std::hex
+               << recv_packet.control_code << ")";
+            STDSC_THROW_REJECT(ss.str());
+        }
+
+        if (size > 0)
+        {
+            buffer.resize(size);
+            sock_.recv_buffer(buffer);
+        }
 
         Packet ack;
         sock_.recv_packet(ack);
@@ -166,16 +212,11 @@ Client::~Client(void)
 {
 }
 
-void Client::connect(const char* host, const char* port)
+void Client::connect(const char* host, const char* port,
+                     const uint32_t retry_interval_usec,
+                     const uint32_t timeout_sec)
 {
-    try
-    {
-        pimpl_->connect(host, port);
-    }
-    catch (const stdsc::SocketException& e)
-    {
-        STDSC_LOG_TRACE("Can not connect to server (%s@%s)", host, port);
-    }
+    pimpl_->connect(host, port, retry_interval_usec, timeout_sec);
 }
 
 void Client::close(void)
@@ -220,11 +261,16 @@ void Client::recv_data(const uint64_t code, Buffer& buffer)
 }
 
 void Client::send_request_blocking(const uint64_t code,
-                                   uint32_t retry_interval_usec,
-                                   uint32_t timeout_sec)
+                                   const uint32_t retry_interval_usec,
+                                   const uint32_t timeout_sec)
 {
     bool is_success = false;
-    while (!is_success)
+    uint32_t retry_count = 0;
+
+    uint32_t max_retry_count =
+      calc_retry_count(timeout_sec, retry_interval_usec);
+
+    while (!is_success && max_retry_count > retry_count)
     {
         try
         {
@@ -233,19 +279,29 @@ void Client::send_request_blocking(const uint64_t code,
         }
         catch (const stdsc::RejectException& e)
         {
-            STDSC_LOG_TRACE("%s", e.what());
+            retry_count++;
+            STDSC_LOG_TRACE("Retry to send request. (%d / %d)", retry_count,
+                            max_retry_count);
             usleep(retry_interval_usec);
             continue;
         }
     }
+
+    STDSC_THROW_SOCKET_IF_CHECK(max_retry_count > retry_count,
+                                "Sending request time out");
 }
 
 void Client::send_data_blocking(const uint64_t code, const Buffer& buffer,
-                                uint32_t retry_interval_usec,
-                                uint32_t timeout_sec)
+                                const uint32_t retry_interval_usec,
+                                const uint32_t timeout_sec)
 {
     bool is_success = false;
-    while (!is_success)
+    uint32_t retry_count = 0;
+
+    uint32_t max_retry_count =
+      calc_retry_count(timeout_sec, retry_interval_usec);
+
+    while (!is_success && max_retry_count > retry_count)
     {
         try
         {
@@ -254,19 +310,29 @@ void Client::send_data_blocking(const uint64_t code, const Buffer& buffer,
         }
         catch (const stdsc::RejectException& e)
         {
-            STDSC_LOG_TRACE("%s", e.what());
+            retry_count++;
+            STDSC_LOG_TRACE("Retry to send data. (%d / %d)", retry_count,
+                            max_retry_count);
             usleep(retry_interval_usec);
             continue;
         }
     }
+
+    STDSC_THROW_SOCKET_IF_CHECK(max_retry_count > retry_count,
+                                "Sending data time out");
 }
 
 void Client::recv_data_blocking(const uint64_t code, Buffer& buffer,
-                                uint32_t retry_interval_usec,
-                                uint32_t timeout_sec)
+                                const uint32_t retry_interval_usec,
+                                const uint32_t timeout_sec)
 {
     bool is_success = false;
-    while (!is_success)
+    uint32_t retry_count = 0;
+
+    uint32_t max_retry_count =
+      calc_retry_count(timeout_sec, retry_interval_usec);
+
+    while (!is_success && max_retry_count > retry_count)
     {
         try
         {
@@ -275,11 +341,16 @@ void Client::recv_data_blocking(const uint64_t code, Buffer& buffer,
         }
         catch (const stdsc::RejectException& e)
         {
-            STDSC_LOG_TRACE("%s", e.what());
+            retry_count++;
+            STDSC_LOG_TRACE("Retry to recv data. (%d / %d)", retry_count,
+                            max_retry_count);
             usleep(retry_interval_usec);
             continue;
         }
     }
+
+    STDSC_THROW_SOCKET_IF_CHECK(max_retry_count > retry_count,
+                                "Receiving data time out");
 }
 
 } /* namespace opsica_packet */

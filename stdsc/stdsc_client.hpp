@@ -35,7 +35,10 @@ public:
     Client(void);
     virtual ~Client(void);
 
-    void connect(const char* host, const char* port);
+    void connect(const char* host, const char* port,
+                 const uint32_t retry_interval_usec = STDSC_RETRY_INTERVAL_USEC,
+                 const uint32_t timeout_sec = STDSC_TIME_INFINITE);
+
     void close(void);
 
     void send_request(const uint64_t code);
@@ -43,17 +46,18 @@ public:
     void recv_data(const uint64_t code, Buffer& buffer);
 
     void send_request_blocking(const uint64_t code,
-                               uint32_t retry_interval_usec =
+                               const uint32_t retry_interval_usec =
                                  STDSC_RETRY_INTERVAL_USEC,
-                               uint32_t timeout_sec = STDSC_INFINITE);
+                               const uint32_t timeout_sec =
+                                 STDSC_TIME_INFINITE);
     void send_data_blocking(const uint64_t code, const Buffer& buffer,
-                            uint32_t retry_interval_usec =
+                            const uint32_t retry_interval_usec =
                               STDSC_RETRY_INTERVAL_USEC,
-                            uint32_t timeout_sec = STDSC_INFINITE);
+                            const uint32_t timeout_sec = STDSC_TIME_INFINITE);
     void recv_data_blocking(const uint64_t code, Buffer& buffer,
-                            uint32_t retry_interval_usec =
+                            const uint32_t retry_interval_usec =
                               STDSC_RETRY_INTERVAL_USEC,
-                            uint32_t timeout_sec = STDSC_INFINITE);
+                            const uint32_t timeout_sec = STDSC_TIME_INFINITE);
 
 private:
     struct Impl;

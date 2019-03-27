@@ -15,8 +15,9 @@
  * limitations under the License.
  */
 
+#include <unistd.h>
 #include <memory>
-
+#include <limits>
 #include <stdsc/stdsc_server.hpp>
 #include <stdsc/stdsc_socket.hpp>
 #include <stdsc/stdsc_log.hpp>
@@ -28,16 +29,18 @@
 
 namespace stdsc
 {
+
+static constexpr std::size_t RETRY_INTERVAL_MSEC = 1000;
+static constexpr std::size_t MAX_RETRY_COUNT =
+std::numeric_limits<size_t>::max();
+
 template <class T>
 struct Server<T>::Impl
 {
     std::shared_ptr<ThreadException> te_;
 
-    Impl(const char* port, StateContext& state) : state_(state)
+    Impl(const char* port, StateContext& state) : port_(port), state_(state)
     {
-        auto listen_socket = Socket::make_listen_socket(port, SO_REUSEADDR);
-        sock_ =
-          std::make_shared<Socket>(Socket::accept_connection(listen_socket));
         te_ = ThreadException::create();
     }
 
@@ -48,52 +51,69 @@ struct Server<T>::Impl
 
     void exec(T& args, std::shared_ptr<ThreadException> te)
     {
-        Packet packet;
-        bool running = true;
+        std::size_t retry_count = 0;
 
-        while (running)
+        while (MAX_RETRY_COUNT > retry_count)
         {
-            try
-            {
-                sock_->recv_packet(packet);
-                STDSC_LOG_TRACE("Received packet. (code:0x%08x)",
-                                 packet.control_code);
+            auto listen_socket =
+              Socket::make_listen_socket(port_, SO_REUSEADDR);
+            STDSC_LOG_INFO("Listen socket. (retry count : %lu)", retry_count);
 
-                if (kControlCodeExit == packet.control_code)
+            Socket sock = Socket::accept_connection(listen_socket);
+            Socket* sock_ = &sock;
+
+            bool running = true;
+
+            while (running)
+            {
+                try
                 {
+                    Packet packet;
+                    sock_->recv_packet(packet);
+                    STDSC_LOG_TRACE("Received packet. (code:0x%08x)",
+                                    packet.control_code);
+
+                    if (kControlCodeExit == packet.control_code)
+                    {
+                        running = false;
+                        break;
+                    }
+
+                    try
+                    {
+                        callback_.eval(*sock_, packet, state_);
+                        STDSC_LOG_TRACE("callback finished.");
+                        sock_->send_packet(make_packet(kControlCodeAccept));
+                    }
+                    catch (const CallbackException& e)
+                    {
+                        STDSC_LOG_TRACE(
+                          "Failed to execute callback function. %s", e.what());
+                        sock_->send_packet(make_packet(kControlCodeReject));
+                    }
+                }
+                catch (const stdsc::AbstractException& e)
+                {
+                    STDSC_LOG_ERR("Failed to server process (%s)", e.what());
+                    te->set_current_exception();
                     running = false;
                     break;
                 }
+            }
 
-                try
-                {
-                    callback_.eval(*sock_, packet, state_);
-                    STDSC_LOG_TRACE("callback finished.");
-                    sock_->send_packet(make_packet(kControlCodeAccept));
-                }
-                catch (const CallbackException& e)
-                {
-                    STDSC_LOG_TRACE("Failed to execute callback function. %s",
-                                     e.what());
-                    sock_->send_packet(make_packet(kControlCodeReject));
-                }
-            }
-            catch (const stdsc::AbstractException& e)
-            {
-                STDSC_LOG_ERR("Failed to client process (%s)", e.what());
-                te->set_current_exception();
-                break;
-            }
+            sock_->shutdown();
+            sock_->close();
+            listen_socket.close();
+
+            retry_count++;
+            ::usleep(RETRY_INTERVAL_MSEC * 1000);
         }
-
-        sock_->shutdown();
-        sock_->close();
     }
 
 private:
+    const char* port_;
     StateContext& state_;
     CallbackFunctionContainer callback_;
-    std::shared_ptr<Socket> sock_;
 };
 
 template <class T>

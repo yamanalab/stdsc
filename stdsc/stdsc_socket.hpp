@@ -51,9 +51,9 @@ public:
                                      int backlog = STDSC_SOMAXCONN);
 
     static Socket accept_connection(Socket& listen_sock,
-                                    uint32_t timeout_sec = STDSC_INFINITE);
+                                    uint32_t timeout_sec = STDSC_TIME_INFINITE);
 
-    static Socket establish_connection(const char* host_or_addr,
+    static Socket establish_connection(const char* host,
                                        const char* port,
                                        uint32_t timeout_sec =
                                          STDSC_CONN_TIMEOUT_SEC);
@@ -65,12 +65,12 @@ public:
     void send_packet(const Packet& packet) const;
 
     void recv_packet(Packet& packet,
-                     uint32_t timeout_sec = STDSC_INFINITE) const;
+                     uint32_t timeout_sec = STDSC_TIME_INFINITE) const;
 
     void send_buffer(const Buffer& buffer) const;
 
     void recv_buffer(Buffer& buffer,
-                     uint32_t timeout_sec = STDSC_INFINITE) const;
+                     uint32_t timeout_sec = STDSC_TIME_INFINITE) const;
 
 private:
     struct Impl;

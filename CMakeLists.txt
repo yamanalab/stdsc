@@ -10,5 +10,4 @@ set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -std=c++11 -pthread -Wall")
 include_directories(${PROJECT_SOURCE_DIR})
 
 add_subdirectory(stdsc)
-#add_subdirectory(examples)
-
+add_subdirectory(examples)

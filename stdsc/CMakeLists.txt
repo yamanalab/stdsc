@@ -1,14 +1,11 @@
-cmake_minimum_required(VERSION 2.8)
+set(module_name ${project_name})
 
-set(project_name stdsc)
-project(${project_name})
+option(BUILD_SHARED_LIBS "build as a shared library" ON)
 
-find_package(Threads REQUIRED)
-set(CMAKE_CXX_FLAGS "-O3 -std=c++11 -pthread -Wall -DNDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "-O2 -g -std=c++11 -pthread -Wall")
+file(GLOB sources *.cpp)
 
-include_directories(${PROJECT_SOURCE_DIR})
-
-add_subdirectory(stdsc)
-#add_subdirectory(examples)
-
+if (BUILD_SHARED_LIBS)
+  add_library(${module_name} SHARED ${sources})
+else()
+  add_library(${module_name} STATIC ${sources})
+endif()
