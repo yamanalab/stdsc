@@ -15,35 +15,39 @@
  * limitations under the License.
  */
 
-#ifndef SERVER_HPP
-#define SERVER_HPP
+#ifndef CALLBACK_FUNCTION_HPP
+#define CALLBACK_FUNCTION_HPP
 
-#include <memory>
-#include <stdsc/stdsc_server.hpp>
-#include <server/callback_function.hpp>
-#include <share/define.hpp>
+#include <string>
+#include <cstdint>
+#include <stdsc/stdsc_callback_function.hpp>
 
 namespace stdsc
 {
-    class StateContext;
+class StateContext;
+class Buffer;
+class Socket;
 }
 
 namespace server
 {
 
-struct AddServer
+struct CallbackParam
 {
-    AddServer(stdsc::StateContext& state, const char* port);
-    ~AddServer(void) = default;
-
-    void start(void);
-    void join(void);
-
-private:
-    CallbackParam param_;
-    std::shared_ptr<stdsc::Server<>> server_;
+    uint32_t valueA;
+    uint32_t valueB;
+    uint32_t sum;
 };
+
+DECLARE_DATA_CLASS(CallbackFunctionForValueA);
+DECLARE_DATA_CLASS(CallbackFunctionForValueB);
+DECLARE_REQUEST_CLASS(CallbackFunctionForComputeRequest);
+#if 1
+DECLARE_UPDOWNLOAD_CLASS(CallbackFunctionForResultRequest);
+#else
+DECLARE_DOWNLOAD_CLASS(CallbackFunctionForResultRequest);
+#endif
 
 } /* namespace server */
 
-#endif /* SERVER_HPP */
+#endif /* CALLBACK_FUNCTION_HPP */

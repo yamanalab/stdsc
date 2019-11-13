@@ -21,22 +21,98 @@
 #include <cstdint>
 #include <memory>
 
-#define DEFINE_REQUEST_FUNC(cls)                                          \
-    void cls::request_function(uint64_t code, stdsc::StateContext& state) \
-    {                                                                     \
-    }
-
-#define DEFINE_DATA_FUNC(cls)                                           \
-    void cls::data_function(uint64_t code, const stdsc::Buffer& buffer, \
-                            stdsc::StateContext& state)                 \
+#define DECLARE_REQUEST_CLASS(cls)                                      \
+    class cls : public stdsc::CallbackFunction                          \
     {                                                                   \
-    }
+    public:                                                             \
+        cls (CallbackParam& param) : param_(param) {}                   \
+    protected:                                                          \
+        virtual void request_function(                                  \
+            uint64_t code,                                              \
+            stdsc::StateContext& state) override;                       \
+    private:                                                            \
+        CallbackParam& param_;                                          \
+}
 
-#define DEFINE_DOWNLOAD_FUNC(cls)                                         \
-    void cls::download_function(uint64_t code, const stdsc::Socket& sock, \
-                                stdsc::StateContext& state)               \
-    {                                                                     \
-    }
+#define DECLARE_DATA_CLASS(cls)                                         \
+    class cls : public stdsc::CallbackFunction                          \
+    {                                                                   \
+    public:                                                             \
+        cls (CallbackParam& param) : param_(param) {}                   \
+    protected:                                                          \
+        virtual void data_function(                                     \
+            uint64_t code,                                              \
+            const stdsc::Buffer& buffer,                                \
+            stdsc::StateContext& state) override;                       \
+    private:                                                            \
+        CallbackParam& param_;                                          \
+}
+
+#define DECLARE_DOWNLOAD_CLASS(cls)                                     \
+    class cls : public stdsc::CallbackFunction                          \
+    {                                                                   \
+    public:                                                             \
+        cls (CallbackParam& param) : param_(param) {}                   \
+    protected:                                                          \
+        virtual void download_function(                                 \
+            uint64_t code,                                              \
+            const stdsc::Socket& sock,                                  \
+            stdsc::StateContext& state) override;                       \
+    private:                                                            \
+        CallbackParam& param_;                                          \
+}
+
+#define DECLARE_UPDOWNLOAD_CLASS(cls)                                   \
+    class cls : public stdsc::CallbackFunction                          \
+    {                                                                   \
+    public:                                                             \
+        cls (CallbackParam& param) : param_(param) {}                   \
+    protected:                                                          \
+        virtual void updownload_function(                               \
+            uint64_t code,                                              \
+            const stdsc::Buffer& buffer,                                \
+            const stdsc::Socket& sock,                                  \
+            stdsc::StateContext& state) override;                       \
+    private:                                                            \
+        CallbackParam& param_;                                          \
+}
+
+#define DEFUN_DATA(cls)                                                 \
+    void cls::data_function(uint64_t code,                              \
+                            const stdsc::Buffer& buffer,                \
+                            stdsc::StateContext& state)
+
+#define DEFUN_REQUEST(cls)                                              \
+    void cls::request_function(uint64_t code,                           \
+                               stdsc::StateContext& state)
+
+#define DEFUN_DOWNLOAD(cls)                                             \
+    void cls::download_function(uint64_t code,                          \
+                                const stdsc::Socket& sock,              \
+                                stdsc::StateContext& state)
+
+#define DEFUN_UPDOWNLOAD(cls)                                           \
+    void cls::updownload_function(uint64_t code,                        \
+                                  const stdsc::Buffer& buffer,          \
+                                  const stdsc::Socket& sock,            \
+                                  stdsc::StateContext& state)
+
+/* DEFINE_REQUEST_FUNC macro is deplicated in v2.x */
+#define DEFINE_REQUEST_FUNC(cls)                                        \
+    void cls::request_function(uint64_t code,                           \
+                               stdsc::StateContext& state) {}
+
+/* DEFINE_DATA_FUNC macro is deplicated in v2.x */
+#define DEFINE_DATA_FUNC(cls)                                           \
+    void cls::data_function(uint64_t code,                              \
+                            const stdsc::Buffer& buffer,                \
+                            stdsc::StateContext& state) {}
+
+/* DEFINE_DOWNLOAD_FUNC macro is deplicated in v2.x */
+#define DEFINE_DOWNLOAD_FUNC(cls)                                       \
+    void cls::download_function(uint64_t code,                          \
+                                const stdsc::Socket& sock,              \
+                                stdsc::StateContext& state) {}
 
 namespace stdsc
 {
@@ -52,18 +128,21 @@ class CallbackFunction
 {
 public:
     CallbackFunction(void) = default;
-    ~CallbackFunction(void) = default;
+    virtual ~CallbackFunction(void) = default;
 
     void eval(uint64_t code, StateContext& state);
     void eval(uint64_t code, const Buffer& buffer, StateContext& state);
     void eval(uint64_t code, const Socket& sock, StateContext& state);
+    void eval(uint64_t code, const Buffer& buffer, const Socket& sock, StateContext& state);
 
 protected:
     virtual void request_function(uint64_t code, StateContext& state);
     virtual void data_function(uint64_t code, const Buffer& buffer,
                                StateContext& state);
-    virtual void download_function(uint64_t code, const Socket& sock,
-                                   StateContext& state);
+    virtual void download_function(uint64_t code,
+                                   const Socket& sock, StateContext& state);
+    virtual void updownload_function(uint64_t code, const Buffer& buffer,
+                                     const Socket& sock, StateContext& state);
 };
 } /* namespace stdsc */
 

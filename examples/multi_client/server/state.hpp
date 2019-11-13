@@ -73,6 +73,7 @@ struct StateReady : public stdsc::State
     StateReady(void);
     virtual void set(stdsc::StateContext& sc, uint64_t event) override;
     STDSC_STATE_DEFID(kStateReady);
+
 };
 
 /**
@@ -84,6 +85,7 @@ struct StateComputed : public stdsc::State
     StateComputed(void);
     virtual void set(stdsc::StateContext& sc, uint64_t event) override;
     STDSC_STATE_DEFID(kStateComputed);
+
 };
 
 

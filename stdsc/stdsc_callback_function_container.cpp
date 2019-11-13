@@ -68,6 +68,18 @@ struct CallbackFunctionContainer::Impl
                 map_[code]->eval(code, sock, state);
             }
         }
+        else if (code & kControlCodeGroupUpDownload)
+        {
+            std::size_t buffer_size = packet.u_body.data.size;
+            STDSC_LOG_TRACE("data size: %lu", buffer_size);
+            Buffer buffer(buffer_size);
+            sock.recv_buffer(buffer);
+            if (map_.count(code))
+            {
+                map_[code]->eval(code, buffer, sock, state);
+            }
+        }
+        
     }
 
 private:

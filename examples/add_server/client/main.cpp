@@ -19,13 +19,14 @@
 #include <stdsc/stdsc_exception.hpp>
 #include <stdsc/stdsc_client.hpp>
 #include <stdsc/stdsc_buffer.hpp>
+#include <stdsc/stdsc_log.hpp>
 #include <share/define.hpp>
 #include <share/packet.hpp>
 
 static constexpr uint32_t VALUE_A = 10;
 static constexpr uint32_t VALUE_B = 20;
 
-static uint32_t exec(void)
+static uint32_t run(void)
 {
     const char* host = SERVER_HOST;
     const char* port = SERVER_PORT;
@@ -64,7 +65,9 @@ int main(int argc, char* argv[])
 {
     try
     {
-        std::cout << "Result: " << exec() << std::endl;
+        STDSC_INIT_LOG();
+        STDSC_LOG_INFO("Start client");
+        std::cout << "Result: " << run() << std::endl;
     }
     catch (stdsc::AbstractException& e)
     {

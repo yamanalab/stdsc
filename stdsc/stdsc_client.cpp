@@ -17,6 +17,7 @@
 
 #include <unistd.h>
 #include <sstream>
+#include <mutex>
 #include <stdsc/stdsc_client.hpp>
 #include <stdsc/stdsc_socket.hpp>
 #include <stdsc/stdsc_log.hpp>
@@ -59,7 +60,7 @@ struct Client::Impl
 
     ~Impl(void)
     {
-        sock_.close();
+        close();
     }
 
     void connect(const char* host, const char* port,
@@ -71,6 +72,8 @@ struct Client::Impl
         uint32_t max_retry_count =
           calc_retry_count(timeout_sec, retry_interval_usec);
 
+        std::lock_guard<std::mutex> lock(mutex_);
+        
         while (!is_success && max_retry_count > retry_count)
         {
             try
@@ -96,11 +99,15 @@ struct Client::Impl
 
     void close(void)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
         sock_.close();
     }
 
     void send_request(const uint64_t code)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
         STDSC_LOG_TRACE("Send request packet. (code:0x%08x)", code);
         auto control_code = code;
         auto packet = make_packet(control_code);
@@ -128,6 +135,8 @@ struct Client::Impl
 
     void send_data(const uint64_t code, const Buffer& buffer)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
         STDSC_LOG_TRACE("Send data packet. (code:0x%08x, sz:%lu)", code,
                         buffer.size());
         auto size = static_cast<uint64_t>(buffer.size());
@@ -157,6 +166,8 @@ struct Client::Impl
 
     void recv_data(const uint64_t code, Buffer& buffer)
     {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
         STDSC_LOG_TRACE("Send data request packet. (code:0x%08x)", code);
         auto control_code = code;
         auto packet = make_packet(control_code);
@@ -201,7 +212,59 @@ struct Client::Impl
         }
     }
 
+    void send_recv_data(const uint64_t code, const Buffer& sbuffer, Buffer& rbuffer)
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        
+        STDSC_LOG_TRACE("Send data packet. (code:0x%08x, sz:%lu)", code,
+                        sbuffer.size());
+        auto ssize = static_cast<uint64_t>(sbuffer.size());
+        auto control_code = code;
+        sock_.send_packet(make_data_packet(control_code, ssize));
+        sock_.send_buffer(sbuffer);
+
+        Packet recv_packet;
+        sock_.recv_packet(recv_packet);
+        auto rsize = static_cast<std::size_t>(recv_packet.u_body.data.size);
+        STDSC_LOG_TRACE("Received packet. (code:0x%08x, sz:%lu)",
+                        recv_packet.control_code, rsize);
+        if (recv_packet.control_code == kControlCodeReject)
+        {
+            std::ostringstream ss;
+            ss << "Rejected to recv data. (0x" << std::hex
+               << recv_packet.control_code << ")";
+            STDSC_THROW_REJECT(ss.str());
+        }
+
+        if (rsize > 0)
+        {
+            rbuffer.resize(rsize);
+            sock_.recv_buffer(rbuffer);
+        }
+
+        Packet ack;
+        sock_.recv_packet(ack);
+        STDSC_LOG_TRACE("ack: 0x%x", ack.control_code);
+
+        if (ack.control_code == kControlCodeReject)
+        {
+            std::ostringstream ss;
+            ss << "Rejected to recv data. (0x" << std::hex << ack.control_code
+               << ")";
+            STDSC_THROW_REJECT(ss.str());
+        }
+        if (ack.control_code == kControlCodeFailed)
+        {
+            std::ostringstream ss;
+            ss << "Failed to recv data. (0x" << std::hex << ack.control_code
+               << ")";
+            STDSC_THROW_FAILURE(ss.str());
+        }
+    }
+
+private:
     stdsc::Socket sock_;
+    std::mutex mutex_;
 };
 
 Client::Client(void) : pimpl_(new Impl())
@@ -253,6 +316,18 @@ void Client::recv_data(const uint64_t code, Buffer& buffer)
     try
     {
         pimpl_->recv_data(code, buffer);
+    }
+    catch (const stdsc::SocketException& e)
+    {
+        STDSC_LOG_TRACE("Failed to recv data.");
+    }
+}
+
+void Client::send_recv_data(const uint64_t code, const Buffer& sbuffer, Buffer& rbuffer)
+{
+    try
+    {
+        pimpl_->send_recv_data(code, sbuffer, rbuffer);
     }
     catch (const stdsc::SocketException& e)
     {
@@ -337,6 +412,38 @@ void Client::recv_data_blocking(const uint64_t code, Buffer& buffer,
         try
         {
             recv_data(code, buffer);
+            is_success = true;
+        }
+        catch (const stdsc::RejectException& e)
+        {
+            retry_count++;
+            STDSC_LOG_TRACE("Retry to recv data. (%d / %d)", retry_count,
+                            max_retry_count);
+            usleep(retry_interval_usec);
+            continue;
+        }
+    }
+
+    STDSC_THROW_SOCKET_IF_CHECK(max_retry_count > retry_count,
+                                "Receiving data time out");
+}
+
+void Client::send_recv_data_blocking(const uint64_t code,
+                                     const Buffer& sbuffer, Buffer& rbuffer,
+                                     const uint32_t retry_interval_usec,
+                                     const uint32_t timeout_sec)
+{
+    bool is_success = false;
+    uint32_t retry_count = 0;
+
+    uint32_t max_retry_count =
+      calc_retry_count(timeout_sec, retry_interval_usec);
+
+    while (!is_success && max_retry_count > retry_count)
+    {
+        try
+        {
+            send_recv_data(code, sbuffer, rbuffer);
             is_success = true;
         }
         catch (const stdsc::RejectException& e)

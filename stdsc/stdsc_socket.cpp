@@ -41,6 +41,10 @@ static constexpr int KEEPALIVEDELAY_SEC = 60;
 static constexpr int KEEPINTERVALTIME_SEC = 30;
 static constexpr int KEEPALIVECOUNT = 10;
 
+#if !defined(TCP_KEEPIDLE) && defined(TCP_KEEPALIVE)
+#define TCP_KEEPIDLE TCP_KEEPALIVE
+#endif
+
 #define SOCKET_IF_CHECK(cond, msg)                               \
     do                                                           \
     {                                                            \

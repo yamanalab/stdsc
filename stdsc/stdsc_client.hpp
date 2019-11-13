@@ -44,6 +44,7 @@ public:
     void send_request(const uint64_t code);
     void send_data(const uint64_t code, const Buffer& buffer);
     void recv_data(const uint64_t code, Buffer& buffer);
+    void send_recv_data(const uint64_t code, const Buffer& sbuffer, Buffer& rbuffer);
 
     void send_request_blocking(const uint64_t code,
                                const uint32_t retry_interval_usec =
@@ -58,6 +59,11 @@ public:
                             const uint32_t retry_interval_usec =
                               STDSC_RETRY_INTERVAL_USEC,
                             const uint32_t timeout_sec = STDSC_TIME_INFINITE);
+    void send_recv_data_blocking(const uint64_t code,
+                                 const Buffer& sbuffer, Buffer& rbuffer,
+                                 const uint32_t retry_interval_usec =
+                                 STDSC_RETRY_INTERVAL_USEC,
+                                 const uint32_t timeout_sec = STDSC_TIME_INFINITE);
 
 private:
     struct Impl;

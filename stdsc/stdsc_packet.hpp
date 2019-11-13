@@ -35,21 +35,25 @@ enum ControlCode_t : uint64_t
 {
     kControlCodeNil = 0x0,
 
-    /* Reserved Code: 0x100-0x1FF */
-    kControlCodeGroupReserved = 0x100,
-    kControlCodeAccept = 0x101,
-    kControlCodeReject = 0x102,
-    kControlCodeFailed = 0x103,
-    kControlCodeExit = 0x104,
+    /* Reserved Code: 0x0100-0x01FF */
+    kControlCodeGroupReserved   = 0x0100,
+    kControlCodeAccept          = 0x0101,
+    kControlCodeReject          = 0x0102,
+    kControlCodeFailed          = 0x0103,
+    kControlCodeConnected       = 0x0104,
+    kControlCodeDisConnected    = 0x0105,
 
-    /* Code for Request packet: 0x200-0x2FF */
-    kControlCodeGroupRequest = 0x200,
+    /* Code for Request packet: 0x0200-0x02FF */
+    kControlCodeGroupRequest    = 0x0200,
 
-    /* Code for Data packet: 0x400-0x4FF */
-    kControlCodeGroupData = 0x400,
+    /* Code for Data packet: 0x0400-0x04FF */
+    kControlCodeGroupData       = 0x0400,
 
-    /* Code for Download packet: 0x800-0x8FF */
-    kControlCodeGroupDownload = 0x800,
+    /* Code for Download packet: 0x0800-0x08FF */
+    kControlCodeGroupDownload   = 0x0800,
+
+    /* Code for UpDownload packet: 0x1000-0x10FF */
+    kControlCodeGroupUpDownload = 0x1000,
 };
 
 struct DataHeader
