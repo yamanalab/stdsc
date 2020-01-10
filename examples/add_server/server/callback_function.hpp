@@ -39,81 +39,86 @@ struct CallbackParam
     uint32_t sum;
 };
 
-class CallbackFunctionForValueA : public stdsc::CallbackFunction
-{
-public:
-    CallbackFunctionForValueA(CallbackParam& param) : param_(param)
-    {
-    }
+DECLARE_DATA_CLASS(CallbackFunctionForValueA);
+DECLARE_DATA_CLASS(CallbackFunctionForValueB);
+DECLARE_REQUEST_CLASS(CallbackFunctionForComputeRequest);
+DECLARE_DOWNLOAD_CLASS(CallbackFunctionForResultRequest);
 
-protected:
-    virtual void request_function(uint64_t code,
-                                  stdsc::StateContext& state) override;
-    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
-                               stdsc::StateContext& state) override;
-    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
-                                   stdsc::StateContext& state) override;
-
-private:
-    CallbackParam& param_;
-};
-
-class CallbackFunctionForValueB : public stdsc::CallbackFunction
-{
-public:
-    CallbackFunctionForValueB(CallbackParam& param) : param_(param)
-    {
-    }
-
-protected:
-    virtual void request_function(uint64_t code,
-                                  stdsc::StateContext& state) override;
-    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
-                               stdsc::StateContext& state) override;
-    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
-                                   stdsc::StateContext& state) override;
-
-private:
-    CallbackParam& param_;
-};
-
-class CallbackFunctionForComputeRequest : public stdsc::CallbackFunction
-{
-public:
-    CallbackFunctionForComputeRequest(CallbackParam& param) : param_(param)
-    {
-    }
-
-protected:
-    virtual void request_function(uint64_t code,
-                                  stdsc::StateContext& state) override;
-    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
-                               stdsc::StateContext& state) override;
-    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
-                                   stdsc::StateContext& state) override;
-
-private:
-    CallbackParam& param_;
-};
-
-class CallbackFunctionForResultRequest : public stdsc::CallbackFunction
-{
-public:
-    CallbackFunctionForResultRequest(CallbackParam& param) : param_(param)
-    {
-    }
-
-protected:
-    virtual void request_function(uint64_t code,
-                                  stdsc::StateContext& state) override;
-    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
-                               stdsc::StateContext& state) override;
-    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
-                                   stdsc::StateContext& state) override;
-
-private:
-    CallbackParam& param_;
-};
+//class CallbackFunctionForValueA : public stdsc::CallbackFunction
+//{
+//public:
+//    CallbackFunctionForValueA(CallbackParam& param) : param_(param)
+//    {
+//    }
+//
+//protected:
+//    virtual void request_function(uint64_t code,
+//                                  stdsc::StateContext& state) override;
+//    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
+//                               stdsc::StateContext& state) override;
+//    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
+//                                   stdsc::StateContext& state) override;
+//
+//private:
+//    CallbackParam& param_;
+//};
+//
+//class CallbackFunctionForValueB : public stdsc::CallbackFunction
+//{
+//public:
+//    CallbackFunctionForValueB(CallbackParam& param) : param_(param)
+//    {
+//    }
+//
+//protected:
+//    virtual void request_function(uint64_t code,
+//                                  stdsc::StateContext& state) override;
+//    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
+//                               stdsc::StateContext& state) override;
+//    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
+//                                   stdsc::StateContext& state) override;
+//
+//private:
+//    CallbackParam& param_;
+//};
+//
+//class CallbackFunctionForComputeRequest : public stdsc::CallbackFunction
+//{
+//public:
+//    CallbackFunctionForComputeRequest(CallbackParam& param) : param_(param)
+//    {
+//    }
+//
+//protected:
+//    virtual void request_function(uint64_t code,
+//                                  stdsc::StateContext& state) override;
+//    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
+//                               stdsc::StateContext& state) override;
+//    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
+//                                   stdsc::StateContext& state) override;
+//
+//private:
+//    CallbackParam& param_;
+//};
+//
+//class CallbackFunctionForResultRequest : public stdsc::CallbackFunction
+//{
+//public:
+//    CallbackFunctionForResultRequest(CallbackParam& param) : param_(param)
+//    {
+//    }
+//
+//protected:
+//    virtual void request_function(uint64_t code,
+//                                  stdsc::StateContext& state) override;
+//    virtual void data_function(uint64_t code, const stdsc::Buffer& buffer,
+//                               stdsc::StateContext& state) override;
+//    virtual void download_function(uint64_t code, const stdsc::Socket& sock,
+//                                   stdsc::StateContext& state) override;
+//
+//private:
+//    CallbackParam& param_;
+//};
 
 } /* namespace server */
 

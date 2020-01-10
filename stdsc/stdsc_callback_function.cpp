@@ -39,6 +39,12 @@ void CallbackFunction::eval(uint64_t code, const Socket& sock,
     download_function(code, sock, state);
 }
 
+void CallbackFunction::eval(uint64_t code, const Buffer& buffer,
+                            const Socket& sock, StateContext& state)
+{
+    updownload_function(code, buffer, sock, state);
+}
+
 void CallbackFunction::request_function(uint64_t code, StateContext& state)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
@@ -52,6 +58,12 @@ void CallbackFunction::data_function(uint64_t code, const Buffer& buffer,
 
 void CallbackFunction::download_function(uint64_t code, const Socket& sock,
                                          StateContext& state)
+{
+    STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
+}
+
+    void CallbackFunction::updownload_function(uint64_t code, const Buffer& buffer,
+                                               const Socket& sock, StateContext& state)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }

@@ -42,7 +42,8 @@ void initialize_packet(Packet& packet)
 
 Packet make_data_packet(uint64_t control_code, uint64_t size)
 {
-    STDSC_IF_CHECK(static_cast<uint64_t>(control_code) & kControlCodeGroupData,
+    STDSC_IF_CHECK((static_cast<uint64_t>(control_code) & kControlCodeGroupData ||
+                    static_cast<uint64_t>(control_code) & kControlCodeGroupUpDownload),
                     "invalid control code");
     Packet packet(control_code);
     packet.u_body.data.size = size;
