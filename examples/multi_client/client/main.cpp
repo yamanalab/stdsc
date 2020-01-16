@@ -30,7 +30,7 @@
 #include <share/define.hpp>
 #include <share/packet.hpp>
 
-static constexpr uint32_t NTHREAD = 100;
+static constexpr uint32_t NTHREAD = 4;
 static constexpr uint32_t VALUE_A = 10;
 static constexpr uint32_t VALUE_B = 20;
 static constexpr uint32_t SUM_AB  = 30; // expected value of sum(A, B)
@@ -54,13 +54,6 @@ private:
         oss << std::this_thread::get_id();
         auto thread_id = oss.str();
         
-        std::random_device seed_gen;
-        std::mt19937 mt(seed_gen());
-        std::uniform_int_distribution<> dist(1, 4);
-
-        auto interval_sec_A = dist(mt);
-        auto interval_sec_B = dist(mt);
-        
         stdsc::Client client;
         client.connect(host_, port_);
         std::cout << "Connected to server." << std::endl;
@@ -70,24 +63,29 @@ private:
         uint32_t vb = args.valB;
         uint32_t vr = args.sumAB;
 
-        LOG("sleep %u sec before sending valueA", interval_sec_A);
-        std::this_thread::sleep_for(std::chrono::seconds(interval_sec_A));
+        LOG("compute sum of %u and %u. expected result is %u", va, vb, vr);
+
+        auto interval_sec_1 = va;
+        auto interval_sec_2 = vb;
+
+        LOG("sleep %u sec before sending valueA", interval_sec_1);
+        std::this_thread::sleep_for(std::chrono::seconds(interval_sec_1));
 
         // Send VALUE_A
         stdsc::Buffer bufferA(sz);
         std::memcpy(bufferA.data(), static_cast<void*>(&va), sz);
         client.send_data_blocking(share::kControlCodeValueA, bufferA);
-        LOG("Sent valueA.");
-
-        LOG("sleep %u sec before sending valueB", interval_sec_B);
-        std::this_thread::sleep_for(std::chrono::seconds(interval_sec_B));
+        LOG("Sent valueA. (val:%u)", va);
 
         // Send VALUE_B
         stdsc::Buffer bufferB(sz);
         std::memcpy(bufferB.data(), static_cast<void*>(&vb), sz);
         client.send_data_blocking(share::kControlCodeValueB, bufferB);
-        LOG("Sent valueB.");
+        LOG("Sent valueB. (val:%u)", vb);
 
+        LOG("sleep %u sec before sending compute request", interval_sec_2);
+        std::this_thread::sleep_for(std::chrono::seconds(interval_sec_2));
+        
         // Send Compute Request
         client.send_request_blocking(share::kControlCodeRequestCompute);
         LOG("Sent compute request.");
@@ -97,7 +95,7 @@ private:
         std::memcpy(bufferR.data(), static_cast<void*>(&vr), sz);
         stdsc::Buffer result;
         client.send_recv_data_blocking(share::kControlCodeDownloadResult, bufferR, result);
-        LOG("Sent expected value and received result.");
+        LOG("Sent expected value, then compare result on server. (expected:%u)", vr);
 #else
         stdsc::Buffer result;
         client.recv_data_blocking(share::kControlCodeDownloadResult, result);
@@ -132,19 +130,34 @@ static void run(const uint32_t nthread)
     std::vector<Param> param(nthread);
 
     for (uint32_t i=0; i<nthread; ++i) {
-        param[i].valA   = VALUE_A;
-        param[i].valB   = VALUE_B;
-        param[i].sumAB  = SUM_AB;
+        std::random_device seed_gen;
+        std::mt19937 mt(seed_gen());
+        std::uniform_int_distribution<> dist(1, 4);
+
+        auto valA = dist(mt);
+        auto valB = dist(mt);
+        
+        param[i].valA   = valA;
+        param[i].valB   = valB;
+        param[i].sumAB  = valA + valB;
         param[i].result = 0;
         auto te = stdsc::ThreadException::create();
         cli[i] = std::make_shared<ClientThread<Param>>(host, port);
         cli[i]->start(param[i], te);
     }
+
+    uint32_t verify = 0;
     for (uint32_t i=0; i<NTHREAD; ++i) {
         cli[i]->join();
-        std::cout << "Result of " << param[i].thread_id
-                  << " : " << param[i].result << std::endl;
+        verify += param[i].result;
+        std::string res = (param[i].result) ? "True" : "False";
+        std::cout << "[" << param[i].thread_id << "] "
+                  << "Result of comparision: " << res << std::endl;
     }
+
+    std::cout << "Result of all comparision: "
+              << ((verify == NTHREAD) ? "True" : "False") << std::endl;
+    
 }
 
 int main(int argc, char* argv[])
