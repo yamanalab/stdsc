@@ -35,7 +35,8 @@ DEFUN_DATA(CallbackFunctionForValueA)
       kStateInit <= state.current_state(),
       "Warn: must be connected state to receive valueA.");
     std::cout << "Received valueA." << std::endl;
-    param_.valueA = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA(server::CallbackParam);
+    cdata->valueA = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueA);
 }
 
@@ -46,7 +47,8 @@ DEFUN_DATA(CallbackFunctionForValueB)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received valueB." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    param_.valueB = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA(server::CallbackParam);
+    cdata->valueB = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueB);
 }
 
@@ -57,7 +59,8 @@ DEFUN_REQUEST(CallbackFunctionForComputeRequest)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received compute request." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    param_.sum = param_.valueA + param_.valueB;
+    DEF_CDATA(server::CallbackParam);
+    cdata->sum = cdata->valueA + cdata->valueB;
     state.set(kEventReceivedComputeRequest);
 }
 
@@ -67,9 +70,10 @@ DEFUN_DOWNLOAD(CallbackFunctionForResultRequest)
       kStateComputed <= state.current_state(),
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received result request." << std::endl;
-    size_t size = sizeof(param_.sum);
+    DEF_CDATA(server::CallbackParam);
+    size_t size = sizeof(cdata->sum);
     stdsc::Buffer buffer(size);
-    *static_cast<uint32_t*>(buffer.data()) = param_.sum;
+    *static_cast<uint32_t*>(buffer.data()) = cdata->sum;
     sock.send_packet(
       stdsc::make_data_packet(share::kControlCodeDataResult, size));
     sock.send_buffer(buffer);

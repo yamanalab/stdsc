@@ -465,6 +465,21 @@ Socket Socket::establish_connection(const char* host, const char* port,
     return connected_socket;
 }
 
+int Socket::connection_id(void) const
+{
+    return pimpl_->socket_;
+}
+
+void Socket::shutdown(void)
+{
+    shutdown_socket(pimpl_->socket_);
+}
+
+void Socket::close(void)
+{
+    close_socket(pimpl_->socket_);
+}
+
 void Socket::send_packet(const Packet& packet) const
 {
     pimpl_->write(reinterpret_cast<const void*>(&packet), sizeof(Packet));
@@ -500,16 +515,6 @@ void Socket::recv_buffer(Buffer& buffer, uint32_t timeout_sec) const
 
         pimpl_->read(reinterpret_cast<void*>(buffer.data()), buffer.size());
     }
-}
-
-void Socket::shutdown(void)
-{
-    shutdown_socket(pimpl_->socket_);
-}
-
-void Socket::close(void)
-{
-    close_socket(pimpl_->socket_);
 }
 
 } /* stdsc */

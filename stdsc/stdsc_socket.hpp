@@ -57,6 +57,8 @@ public:
                                        const char* port,
                                        uint32_t timeout_sec =
                                          STDSC_CONN_TIMEOUT_SEC);
+    
+    int connection_id(void) const;
 
     void shutdown(void);
 

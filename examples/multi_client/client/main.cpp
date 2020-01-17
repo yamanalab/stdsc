@@ -22,6 +22,7 @@
 #include <sstream>
 #include <memory>
 #include <array>
+#include <unistd.h>
 #include <stdsc/stdsc_exception.hpp>
 #include <stdsc/stdsc_client.hpp>
 #include <stdsc/stdsc_buffer.hpp>
@@ -30,10 +31,7 @@
 #include <share/define.hpp>
 #include <share/packet.hpp>
 
-static constexpr uint32_t NTHREAD = 4;
-static constexpr uint32_t VALUE_A = 10;
-static constexpr uint32_t VALUE_B = 20;
-static constexpr uint32_t SUM_AB  = 30; // expected value of sum(A, B)
+static constexpr uint32_t DEF_NTHREAD = 4;
 
 #define LOG(fmt, ...) printf("[%s] " fmt "\n", thread_id.c_str(), ##__VA_ARGS__)
 
@@ -112,6 +110,11 @@ private:
     const char* port_;
 };
 
+struct Option
+{
+    uint32_t nthread = DEF_NTHREAD;
+};
+
 struct Param
 {
     uint32_t valA;
@@ -121,6 +124,25 @@ struct Param
     std::string thread_id;
 };
 
+void init(Option& options, int argc, char* argv[])
+{
+    int opt;
+    opterr = 0;
+    while ((opt = getopt(argc, argv, "n:h")) != -1)
+    {
+        switch (opt)
+        {
+            case 'n':
+                options.nthread = std::stol(optarg);
+                break;
+            case 'h':
+            default:
+                printf("Usage: %s [-n nthread]\n", argv[0]);
+                exit(1);
+        }
+    }
+}
+
 static void run(const uint32_t nthread)
 {
     const char* host = SERVER_HOST;
@@ -128,6 +150,8 @@ static void run(const uint32_t nthread)
 
     std::vector<std::shared_ptr<ClientThread<Param>>> cli(nthread);
     std::vector<Param> param(nthread);
+
+    std::cout << "Launch " << nthread << " clients" << std::endl;
 
     for (uint32_t i=0; i<nthread; ++i) {
         std::random_device seed_gen;
@@ -147,7 +171,7 @@ static void run(const uint32_t nthread)
     }
 
     uint32_t verify = 0;
-    for (uint32_t i=0; i<NTHREAD; ++i) {
+    for (uint32_t i=0; i<nthread; ++i) {
         cli[i]->join();
         verify += param[i].result;
         std::string res = (param[i].result) ? "True" : "False";
@@ -156,7 +180,7 @@ static void run(const uint32_t nthread)
     }
 
     std::cout << "Result of all comparision: "
-              << ((verify == NTHREAD) ? "True" : "False") << std::endl;
+              << ((verify == nthread) ? "True" : "False") << std::endl;
     
 }
 
@@ -166,7 +190,9 @@ int main(int argc, char* argv[])
     {
         STDSC_INIT_LOG();
         STDSC_LOG_INFO("Start client");
-        run(NTHREAD);
+        Option opt;
+        init(opt, argc, argv);
+        run(opt.nthread);
     }
     catch (stdsc::AbstractException& e)
     {

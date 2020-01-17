@@ -37,6 +37,7 @@ public:
     virtual ~CallbackFunctionContainer(void);
     void set(uint64_t code, std::shared_ptr<CallbackFunction>& func);
     void eval(const Socket& sock, const Packet& packet, StateContext& state);
+    void set_commondata(const void* data, const size_t size);
 
 private:
     struct Impl;

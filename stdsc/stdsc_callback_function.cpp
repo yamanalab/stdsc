@@ -22,48 +22,48 @@
 namespace stdsc
 {
 
-void CallbackFunction::eval(uint64_t code, StateContext& state)
+void CallbackFunction::eval(uint64_t code, StateContext& state, void* commondata)
 {
-    request_function(code, state);
+    request_function(code, state, commondata);
 }
 
 void CallbackFunction::eval(uint64_t code, const Buffer& buffer,
-                            StateContext& state)
+                            StateContext& state, void* commondata)
 {
-    data_function(code, buffer, state);
+    data_function(code, buffer, state, commondata);
 }
 
 void CallbackFunction::eval(uint64_t code, const Socket& sock,
-                            StateContext& state)
+                            StateContext& state, void* commondata)
 {
-    download_function(code, sock, state);
+    download_function(code, sock, state, commondata);
 }
 
 void CallbackFunction::eval(uint64_t code, const Buffer& buffer,
-                            const Socket& sock, StateContext& state)
+                            const Socket& sock, StateContext& state, void* commondata)
 {
-    updownload_function(code, buffer, sock, state);
+    updownload_function(code, buffer, sock, state, commondata);
 }
 
-void CallbackFunction::request_function(uint64_t code, StateContext& state)
+void CallbackFunction::request_function(uint64_t code, StateContext& state, void* commondata)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
 void CallbackFunction::data_function(uint64_t code, const Buffer& buffer,
-                                     StateContext& state)
+                                     StateContext& state, void* commondata)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
 void CallbackFunction::download_function(uint64_t code, const Socket& sock,
-                                         StateContext& state)
+                                         StateContext& state, void* commondata)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
     void CallbackFunction::updownload_function(uint64_t code, const Buffer& buffer,
-                                               const Socket& sock, StateContext& state)
+                                               const Socket& sock, StateContext& state, void* commondata)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
