@@ -427,8 +427,6 @@ Socket Socket::establish_connection(const char* host, const char* port,
     STDSC_LOG_DEBUG("connect return: ret:%d, errno:%d", ret, err);
     SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret || EINPROGRESS == err,
                           "Failed to connect", socket);
-    // SOCKET_IF_CHECK_CLOSE(SOCKET_ERROR != ret || EINPROGRESS == err,
-    //                      "Failed to connect", socket);
 
     /* select */
     if (EINPROGRESS == err)

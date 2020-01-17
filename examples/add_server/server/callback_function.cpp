@@ -29,9 +29,6 @@
 namespace server
 {
 
-//void CallbackFunctionForValueA::data_function(uint64_t code,
-//                                              const stdsc::Buffer& buffer,
-//                                              stdsc::StateContext& state)
 DEFUN_DATA(CallbackFunctionForValueA)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -41,12 +38,7 @@ DEFUN_DATA(CallbackFunctionForValueA)
     param_.valueA = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueA);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForValueA);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForValueA);
 
-//void CallbackFunctionForValueB::data_function(uint64_t code,
-//                                              const stdsc::Buffer& buffer,
-//                                              stdsc::StateContext& state)
 DEFUN_DATA(CallbackFunctionForValueB)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -57,11 +49,7 @@ DEFUN_DATA(CallbackFunctionForValueB)
     param_.valueB = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueB);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForValueB);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForValueB);
 
-//void CallbackFunctionForComputeRequest::request_function(
-//  uint64_t code, stdsc::StateContext& state)
 DEFUN_REQUEST(CallbackFunctionForComputeRequest)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -72,11 +60,7 @@ DEFUN_REQUEST(CallbackFunctionForComputeRequest)
     param_.sum = param_.valueA + param_.valueB;
     state.set(kEventReceivedComputeRequest);
 }
-//DEFINE_DATA_FUNC(CallbackFunctionForComputeRequest);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForComputeRequest);
 
-//void CallbackFunctionForResultRequest::download_function(
-//  uint64_t code, const stdsc::Socket& sock, stdsc::StateContext& state)
 DEFUN_DOWNLOAD(CallbackFunctionForResultRequest)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -91,7 +75,5 @@ DEFUN_DOWNLOAD(CallbackFunctionForResultRequest)
     sock.send_buffer(buffer);
     state.set(kEventReceivedResultRequest);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForResultRequest);
-//DEFINE_DATA_FUNC(CallbackFunctionForResultRequest);
 
 } /* namespace server */
