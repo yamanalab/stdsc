@@ -22,48 +22,56 @@
 namespace stdsc
 {
 
-void CallbackFunction::eval(uint64_t code, StateContext& state, void* commondata)
+void CallbackFunction::eval(uint64_t code, StateContext& state,
+                            void* cdata_on_each, void* cdata_on_all)
 {
-    request_function(code, state, commondata);
+    request_function(code, state, cdata_on_each, cdata_on_all);
 }
 
 void CallbackFunction::eval(uint64_t code, const Buffer& buffer,
-                            StateContext& state, void* commondata)
+                            StateContext& state,
+                            void* cdata_on_each, void* cdata_on_all)
 {
-    data_function(code, buffer, state, commondata);
+    data_function(code, buffer, state, cdata_on_each, cdata_on_all);
 }
 
 void CallbackFunction::eval(uint64_t code, const Socket& sock,
-                            StateContext& state, void* commondata)
+                            StateContext& state,
+                            void* cdata_on_each, void* cdata_on_all)
 {
-    download_function(code, sock, state, commondata);
+    download_function(code, sock, state, cdata_on_each, cdata_on_all);
 }
 
 void CallbackFunction::eval(uint64_t code, const Buffer& buffer,
-                            const Socket& sock, StateContext& state, void* commondata)
+                            const Socket& sock, StateContext& state,
+                            void* cdata_on_each, void* cdata_on_all)
 {
-    updownload_function(code, buffer, sock, state, commondata);
+    updownload_function(code, buffer, sock, state, cdata_on_each, cdata_on_all);
 }
 
-void CallbackFunction::request_function(uint64_t code, StateContext& state, void* commondata)
+void CallbackFunction::request_function(uint64_t code, StateContext& state,
+                                        void* cdata_on_each, void* cdata_on_all)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
 void CallbackFunction::data_function(uint64_t code, const Buffer& buffer,
-                                     StateContext& state, void* commondata)
+                                     StateContext& state,
+                                     void* cdata_on_each, void* cdata_on_all)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
 void CallbackFunction::download_function(uint64_t code, const Socket& sock,
-                                         StateContext& state, void* commondata)
+                                         StateContext& state,
+                                         void* cdata_on_each, void* cdata_on_all)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }
 
-    void CallbackFunction::updownload_function(uint64_t code, const Buffer& buffer,
-                                               const Socket& sock, StateContext& state, void* commondata)
+void CallbackFunction::updownload_function(uint64_t code, const Buffer& buffer,
+                                           const Socket& sock, StateContext& state,
+                                           void* cdata_on_each, void* cdata_on_all)
 {
     STDSC_LOG_WARN("%s is not implemented.", __FUNCTION__);
 }

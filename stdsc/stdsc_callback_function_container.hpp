@@ -19,6 +19,7 @@
 #define STDSC_CALLBACK_FUNCTION_CONTAINER_HPP
 
 #include <memory>
+#include <vector>
 
 namespace stdsc
 {
@@ -26,6 +27,17 @@ class CallbackFunction;
 class Socket;
 class StateContext;
 class Packet;
+
+/**
+ * @brief Enumeration for common data kind
+ */
+enum CommonDataKind_t
+{
+    kCommonDataUnknownKind     = -1,
+    kCommonDataOnAllConnection = 0,
+    kCommonDataOnEachConnection,
+    num_of_CommonDataKind,
+};
 
 /**
  * @ brief This class is used to hold the callback functions.
@@ -37,8 +49,8 @@ public:
     virtual ~CallbackFunctionContainer(void);
     void set(uint64_t code, std::shared_ptr<CallbackFunction>& func);
     void eval(const Socket& sock, const Packet& packet, StateContext& state);
-    void set_commondata(const void* data, const size_t size);
-
+    void set_commondata(const void* data, const size_t size,
+                        const CommonDataKind_t kind=kCommonDataOnEachConnection);
 private:
     struct Impl;
     std::shared_ptr<Impl> pimpl_;

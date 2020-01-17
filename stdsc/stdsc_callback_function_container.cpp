@@ -33,8 +33,10 @@ namespace stdsc
 struct CallbackFunctionContainer::Impl
 {
     Impl(void)
-        : commondata_()
-    {}
+        : cdata_on_all_(),
+          cdata_on_each_()
+    {
+    }
     ~Impl(void) = default;
 
     void set(uint64_t code, std::shared_ptr<CallbackFunction>& func)
@@ -45,11 +47,12 @@ struct CallbackFunctionContainer::Impl
 
     void eval(const Socket& sock, const Packet& packet, StateContext& state)
     {
-        cdatamap_.emplace(sock.connection_id(), commondata_);
-        void* cdata = nullptr;
-        if (!commondata_.empty()) {
-            cdata = static_cast<void*>(cdatamap_[sock.connection_id()].data());
+        cdatamap_.emplace(sock.connection_id(), cdata_on_each_);
+        void* cdata_on_each = nullptr;
+        if (!cdata_on_each_.empty()) {
+            cdata_on_each = static_cast<void*>(cdatamap_[sock.connection_id()].data());
         }
+        void* cdata_on_all = (cdata_on_all_.empty()) ? nullptr : cdata_on_all_.data();
         
         auto code = static_cast<uint64_t>(packet.control_code);
         STDSC_LOG_TRACE("eval for 0x%x.", code);
@@ -57,7 +60,7 @@ struct CallbackFunctionContainer::Impl
         {
             if (funcmap_.count(code))
             {
-                funcmap_[code]->eval(code, state, cdata);
+                funcmap_[code]->eval(code, state, cdata_on_each, cdata_on_all);
             }
         }
         else if (code & kControlCodeGroupData)
@@ -68,14 +71,14 @@ struct CallbackFunctionContainer::Impl
             sock.recv_buffer(buffer);
             if (funcmap_.count(code))
             {
-                funcmap_[code]->eval(code, buffer, state, cdata);
+                funcmap_[code]->eval(code, buffer, state, cdata_on_each, cdata_on_all);
             }
         }
         else if (code & kControlCodeGroupDownload)
         {
             if (funcmap_.count(code))
             {
-                funcmap_[code]->eval(code, sock, state, cdata);
+                funcmap_[code]->eval(code, sock, state, cdata_on_each, cdata_on_all);
             }
         }
         else if (code & kControlCodeGroupUpDownload)
@@ -86,23 +89,33 @@ struct CallbackFunctionContainer::Impl
             sock.recv_buffer(buffer);
             if (funcmap_.count(code))
             {
-                funcmap_[code]->eval(code, buffer, sock, state, cdata);
+                funcmap_[code]->eval(code, buffer, sock, state, cdata_on_each, cdata_on_all);
             }
         }
         
     }
 
-    void set_commondata(const void* data, const size_t size)
+    void set_commondata(const void* data, const size_t size, const CommonDataKind_t kind)
     {
-        commondata_.clear();
-        commondata_.resize(size);
-        std::memcpy(commondata_.data(), data, size);
+        switch (kind) {
+        case kCommonDataOnAllConnection:
+            cdata_on_all_.clear();
+            cdata_on_all_.resize(size);
+            std::memcpy(cdata_on_all_.data(), data, size);
+            break;
+        case kCommonDataOnEachConnection:
+        default:
+            cdata_on_each_.clear();
+            cdata_on_each_.resize(size);
+            std::memcpy(cdata_on_each_.data(), data, size);
+        }
     }
 
 private:
-    std::vector<uint8_t> commondata_;
+    std::vector<uint8_t> cdata_on_all_; ///< common data on all connection
+    std::vector<uint8_t> cdata_on_each_; ///< common data on each connection
     std::unordered_map<uint64_t, std::shared_ptr<CallbackFunction>> funcmap_; ///< func map for each control code
-    std::unordered_map<int, std::vector<uint8_t>> cdatamap_; ///< common data map for each connection
+    std::unordered_map<int, std::vector<uint8_t>> cdatamap_; ///< common data map on each connection
 };
 
 CallbackFunctionContainer::CallbackFunctionContainer(void) : pimpl_(new Impl())
@@ -125,9 +138,10 @@ void CallbackFunctionContainer::eval(const Socket& sock, const Packet& packet,
     pimpl_->eval(sock, packet, state);
 }
 
-void CallbackFunctionContainer::set_commondata(const void* data, const size_t size)
+void CallbackFunctionContainer::set_commondata(const void* data, const size_t size,
+                                               const CommonDataKind_t kind)
 {
-    pimpl_->set_commondata(data, size);
+    pimpl_->set_commondata(data, size, kind);
 }
 
 } /* namespace stdsc */

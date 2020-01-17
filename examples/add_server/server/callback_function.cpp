@@ -35,8 +35,8 @@ DEFUN_DATA(CallbackFunctionForValueA)
       kStateInit <= state.current_state(),
       "Warn: must be connected state to receive valueA.");
     std::cout << "Received valueA." << std::endl;
-    DEF_CDATA(server::CallbackParam);
-    cdata->valueA = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->valueA = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueA);
 }
 
@@ -47,8 +47,8 @@ DEFUN_DATA(CallbackFunctionForValueB)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received valueB." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    DEF_CDATA(server::CallbackParam);
-    cdata->valueB = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->valueB = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueB);
 }
 
@@ -59,8 +59,8 @@ DEFUN_REQUEST(CallbackFunctionForComputeRequest)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received compute request." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    DEF_CDATA(server::CallbackParam);
-    cdata->sum = cdata->valueA + cdata->valueB;
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->sum = cdata_e->valueA + cdata_e->valueB;
     state.set(kEventReceivedComputeRequest);
 }
 
@@ -70,10 +70,10 @@ DEFUN_DOWNLOAD(CallbackFunctionForResultRequest)
       kStateComputed <= state.current_state(),
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received result request." << std::endl;
-    DEF_CDATA(server::CallbackParam);
-    size_t size = sizeof(cdata->sum);
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    size_t size = sizeof(cdata_e->sum);
     stdsc::Buffer buffer(size);
-    *static_cast<uint32_t*>(buffer.data()) = cdata->sum;
+    *static_cast<uint32_t*>(buffer.data()) = cdata_e->sum;
     sock.send_packet(
       stdsc::make_data_packet(share::kControlCodeDataResult, size));
     sock.send_buffer(buffer);
