@@ -48,8 +48,8 @@ struct Server<T>::Impl
                           StateContext& state,
                           CallbackFunctionContainer& callback)
             : sock_(sock),
-              state_(state),
-              callback_(callback),
+              state_(state),        // copy
+              callback_(callback),  // ref
               th_(new ServerThread<>(sock_, state_, callback)),
               is_released_(false)
         {}
@@ -88,7 +88,7 @@ struct Server<T>::Impl
 
     private:
         Socket sock_;
-        StateContext& state_;
+        StateContext state_;
         CallbackFunctionContainer& callback_;
         std::shared_ptr<ServerThread<>> th_;
         bool is_released_;
@@ -99,8 +99,8 @@ struct Server<T>::Impl
          CallbackFunctionContainer& callback)
         : param_(),
           port_(port),
-          state_(state),
-          callback_(callback)
+          state_(state),       // copy
+          callback_(callback)  // copy
     {
         te_ = ThreadException::create();
     }
@@ -205,8 +205,8 @@ struct ServerThread<T>::Impl
          CallbackFunctionContainer& callback)
         : param_(),
           sock_(sock),
-          state_(state),
-          callback_(callback)
+          state_(state),      // ref
+          callback_(callback) // ref
     {
         te_ = ThreadException::create();
     }

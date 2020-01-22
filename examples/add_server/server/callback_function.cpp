@@ -29,24 +29,17 @@
 namespace server
 {
 
-//void CallbackFunctionForValueA::data_function(uint64_t code,
-//                                              const stdsc::Buffer& buffer,
-//                                              stdsc::StateContext& state)
 DEFUN_DATA(CallbackFunctionForValueA)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
       kStateInit <= state.current_state(),
       "Warn: must be connected state to receive valueA.");
     std::cout << "Received valueA." << std::endl;
-    param_.valueA = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->valueA = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueA);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForValueA);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForValueA);
 
-//void CallbackFunctionForValueB::data_function(uint64_t code,
-//                                              const stdsc::Buffer& buffer,
-//                                              stdsc::StateContext& state)
 DEFUN_DATA(CallbackFunctionForValueB)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -54,14 +47,11 @@ DEFUN_DATA(CallbackFunctionForValueB)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received valueB." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    param_.valueB = *static_cast<const uint32_t*>(buffer.data());
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->valueB = *static_cast<const uint32_t*>(buffer.data());
     state.set(kEventReceivedValueB);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForValueB);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForValueB);
 
-//void CallbackFunctionForComputeRequest::request_function(
-//  uint64_t code, stdsc::StateContext& state)
 DEFUN_REQUEST(CallbackFunctionForComputeRequest)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
@@ -69,29 +59,25 @@ DEFUN_REQUEST(CallbackFunctionForComputeRequest)
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received compute request." << std::endl;
     std::cout << "Called " << __FUNCTION__ << std::endl;
-    param_.sum = param_.valueA + param_.valueB;
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    cdata_e->sum = cdata_e->valueA + cdata_e->valueB;
     state.set(kEventReceivedComputeRequest);
 }
-//DEFINE_DATA_FUNC(CallbackFunctionForComputeRequest);
-//DEFINE_DOWNLOAD_FUNC(CallbackFunctionForComputeRequest);
 
-//void CallbackFunctionForResultRequest::download_function(
-//  uint64_t code, const stdsc::Socket& sock, stdsc::StateContext& state)
 DEFUN_DOWNLOAD(CallbackFunctionForResultRequest)
 {
     STDSC_THROW_CALLBACK_IF_CHECK(
       kStateComputed <= state.current_state(),
       "Warn: must be connected state to receive valueB.");
     std::cout << "Received result request." << std::endl;
-    size_t size = sizeof(param_.sum);
+    DEF_CDATA_ON_EACH(server::CallbackParam);
+    size_t size = sizeof(cdata_e->sum);
     stdsc::Buffer buffer(size);
-    *static_cast<uint32_t*>(buffer.data()) = param_.sum;
+    *static_cast<uint32_t*>(buffer.data()) = cdata_e->sum;
     sock.send_packet(
       stdsc::make_data_packet(share::kControlCodeDataResult, size));
     sock.send_buffer(buffer);
     state.set(kEventReceivedResultRequest);
 }
-//DEFINE_REQUEST_FUNC(CallbackFunctionForResultRequest);
-//DEFINE_DATA_FUNC(CallbackFunctionForResultRequest);
 
 } /* namespace server */

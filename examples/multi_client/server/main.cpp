@@ -34,21 +34,22 @@ static void run()
     server::CallbackParam param;
     {
         std::shared_ptr<stdsc::CallbackFunction> cb_valueA(
-            new server::CallbackFunctionForValueA(param));
+            new server::CallbackFunctionForValueA());
         callback.set(share::kControlCodeValueA, cb_valueA);
 
         std::shared_ptr<stdsc::CallbackFunction> cb_valueB(
-            new server::CallbackFunctionForValueB(param));
+            new server::CallbackFunctionForValueB());
         callback.set(share::kControlCodeValueB, cb_valueB);
 
         std::shared_ptr<stdsc::CallbackFunction> cb_compute(
-            new server::CallbackFunctionForComputeRequest(param));
+            new server::CallbackFunctionForComputeRequest());
         callback.set(share::kControlCodeRequestCompute, cb_compute);
 
         std::shared_ptr<stdsc::CallbackFunction> cb_result(
-            new server::CallbackFunctionForResultRequest(param));
+            new server::CallbackFunctionForResultRequest());
         callback.set(share::kControlCodeDownloadResult, cb_result);
     }
+    callback.set_commondata(static_cast<void*>(&param), sizeof(param));
 
     std::shared_ptr<stdsc::Server<>> server
         (new stdsc::Server<>(SERVER_PORT, state, callback));
