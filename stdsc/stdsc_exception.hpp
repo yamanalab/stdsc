@@ -52,6 +52,11 @@
         throw stdsc::FileException(message); \
     }
 
+#define STDSC_THROW_INVPARAM(message)            \
+    {                                            \
+        throw stdsc::InvParamException(message); \
+    }
+
 #define STDSC_IF_CHECK(cond, message)       \
     {                                       \
         if (!(cond))                        \
@@ -101,6 +106,15 @@
         {                                    \
             STDSC_THROW_FILE(msg);           \
         }                                    \
+    } while (0)
+
+#define STDSC_THROW_INVPARAM_IF_CHECK(cond, msg) \
+    do                                           \
+    {                                            \
+        if (!(cond))                             \
+        {                                        \
+            STDSC_THROW_INVPARAM(msg);           \
+        }                                        \
     } while (0)
 
 namespace stdsc
@@ -242,6 +256,18 @@ class FileException : public AbstractException
 {
 public:
     FileException(const std::string& message, int32_t outward_error_code = 0)
+      : AbstractException(message, outward_error_code)
+    {
+    }
+};
+
+/**
+ * @brief Provides invalid param exception.
+ */
+class InvParamException : public AbstractException
+{
+public:
+    InvParamException(const std::string& message, int32_t outward_error_code = 0)
       : AbstractException(message, outward_error_code)
     {
     }
