@@ -77,7 +77,8 @@ std::string basename(const std::string& filepath)
 
 bool isdigit(const std::string& str)
 {
-    return !str.empty() && std::all_of(str.cbegin(), str.cend(), ::isdigit);
+    return !str.empty() && std::all_of(str.cbegin() + ((str[0] == '-') ? 1 : 0),
+                                       str.cend(), ::isdigit);
 }
 
 std::string getenv(const char* env_var)
