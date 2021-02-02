@@ -99,6 +99,104 @@ BufferStream::BufferStream(const Buffer& buffer) : Buffer(buffer)
     setup(reinterpret_cast<char*>(super::data()), super::size());
 }
 
+std::ios::pos_type BufferStream::seekoff(
+    std::ios::off_type __off, 
+    std::ios_base::seekdir __way, 
+    std::ios_base::openmode __which)
+{
+    std::ios::pos_type result;
+
+    bool is_input  = (__which & std::ios_base::in)  == std::ios_base::in;
+    bool is_output = (__which & std::ios_base::out) == std::ios_base::out;
+
+    if ((!is_input && !is_output)
+        || ((is_input && is_output) && (__way == std::ios_base::cur))) {
+        return std::ios::pos_type(std::ios::off_type(-1));
+    }
+
+    char* pos_in_base;
+    char* pos_out_base;
+
+    std::ios::pos_type pos_in;
+    std::ios::pos_type pos_out;
+
+    if (is_input) {
+
+        switch (__way) {
+        case std::ios_base::end:
+            pos_in_base = this->egptr() + __off - 1;
+            break;
+        case std::ios_base::cur:
+            pos_in_base = this->gptr() + __off;
+            break;
+        case std::ios_base::beg:
+        default:
+            pos_in_base = this->eback() + __off;
+            break;
+        }
+
+        if (this->eback() <= pos_in_base && pos_in_base < this->egptr()) {
+            pos_in = pos_in_base - this->eback();
+        } else {
+            pos_in_base = nullptr;
+            pos_in = std::ios::pos_type(std::ios::off_type(-1));
+        }
+
+    } else {
+        pos_in_base = nullptr;
+        pos_in = std::ios::pos_type(std::ios::off_type(-1));
+    }
+
+    if (is_output) {
+
+        switch (__way) {
+        case std::ios_base::end:
+            pos_out_base = this->epptr() + __off - 1;
+            break;
+        case std::ios_base::cur:
+            pos_out_base = this->pptr() + __off;
+            break;
+        case std::ios_base::beg:
+        default:
+            pos_out_base = this->pbase() + __off;
+            break;
+        }
+
+        if (this->pbase() <= pos_out_base && pos_out_base < this->epptr()) {
+            pos_out = pos_out_base - this->pbase();
+        } else {
+            pos_out_base = nullptr;
+            pos_out = std::ios::pos_type(std::ios::off_type(-1));
+        }
+
+    } else {
+        pos_out_base = nullptr;
+        pos_out = std::ios::pos_type(std::ios::off_type(-1));
+    }
+
+    if (((is_input && !pos_in_base) || (is_output && !pos_out_base))
+        || ((is_input && is_output) && (pos_in != pos_out))) {
+        result = std::ios::pos_type(std::ios::off_type(-1));
+    } else {
+        result = (is_input ? pos_in : pos_out);
+
+        if (is_input && (gptr() != pos_in_base)) {
+            this->setg(this->eback(), pos_in_base, this->egptr());
+        }
+
+        if (is_output && (pptr() != pos_out_base)) {
+            this->pbump(pos_out_base - this->pptr());
+        }
+    }
+
+    return result;
+}
+
+std::ios::pos_type BufferStream::seekpos(pos_type __sp, std::ios_base::openmode __which)
+{
+    return seekoff(off_type(__sp), std::ios_base::beg, __which);
+}
+
 void BufferStream::setup(char* p, size_t size)
 {
     char* sp = p;

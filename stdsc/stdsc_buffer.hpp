@@ -79,6 +79,14 @@ public:
     BufferStream(BufferStream&& buffer) = delete;
     BufferStream& operator=(BufferStream&& buffer) = delete;
 
+    std::ios::pos_type seekoff(
+        std::ios::off_type __off, 
+        std::ios_base::seekdir __way, 
+        std::ios_base::openmode __which = std::ios_base::in | std::ios_base::out) override;
+    std::ios::pos_type seekpos(
+        std::ios::pos_type __sp, 
+        std::ios_base::openmode __which = std::ios_base::in | std::ios_base::out) override;
+
 private:
     void setup(char* p, size_t size);
 };

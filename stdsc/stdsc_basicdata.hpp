@@ -15,7 +15,7 @@
  * limitations under the License.
  */
 
-#ifndef NBC_BASICDATA_HPP
+#ifndef STDSC_BASICDATA_HPP
 #define STDSC_BASICDATA_HPP
 
 #include <vector>
